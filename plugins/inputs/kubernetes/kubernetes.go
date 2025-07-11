@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"regexp"
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,10 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+var invalid_sql_chars, _ = regexp.Compile(`[^_a-zA-Z0-9]+`)
+var urlToNodeLabels = make(map[string]map[string]string)
+var convertLabels bool
+var nodeLabels bool
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -35,11 +40,14 @@ const (
 type Kubernetes struct {
 	URL             string          `toml:"url"`
 	BearerToken     string          `toml:"bearer_token"`
+
 	NodeMetricName  string          `toml:"node_metric_name"`
 	LabelInclude    []string        `toml:"label_include"`
 	LabelExclude    []string        `toml:"label_exclude"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
+	ConvertLabels     bool            `toml:"convert_labels"`
+	NodeLabels        bool            `toml:"node_labels"`
 
 	tls.ClientConfig
 
@@ -47,6 +55,10 @@ type Kubernetes struct {
 	httpClient  *http.Client
 }
 
+type Addresses struct {
+	InternalIPv4 string
+	ExternalIPv4 string
+}
 func (*Kubernetes) SampleConfig() string {
 	return sampleConfig
 }
@@ -71,11 +83,28 @@ func (k *Kubernetes) Init() error {
 		k.NodeMetricName = "kubernetes_node"
 	}
 
+	if k.ConvertLabels {
+		k.Log.Debugf("k.ConvertLabels true")
+		convertLabels = true
+	}
+
+	if k.NodeLabels {
+		k.Log.Debugf("k.NodeLabels true")
+		nodeLabels = true
+	}
+
+	k.Log.Debugf("k.Init() k = %+v", k)
+
 	return nil
 }
 
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	if k.URL != "" {
+		_, err := getNodeURLs(k.Log)
+		if err != nil {
+			return err
+		}
+		k.Log.Debug("Gather -> gatherSummary")
 		acc.AddError(k.gatherSummary(k.URL, acc))
 		return nil
 	}
@@ -113,6 +142,8 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 		return nil, err
 	}
 
+		urlToNodeLabels = map[string]map[string]string{}
+
 	nodeUrls := make([]string, 0, len(nodes.Items))
 	for i := range nodes.Items {
 		n := &nodes.Items[i]
@@ -122,7 +153,11 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
 		}
-		nodeUrls = append(nodeUrls, "https://"+address+":10250")
+		url := "https://"+address+":10250"
+		labels := make(map[string]string)
+		labels = n.GetLabels()
+		nodeUrls = append(nodeUrls, url)
+		urlToNodeLabels[url] = labels	
 	}
 
 	return nodeUrls, nil
@@ -156,7 +191,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		return err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
-	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName)
+	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName, k.labelFilter, baseURL, k.Log)
 	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
@@ -183,10 +218,35 @@ func buildSystemContainerMetrics(summaryMetrics *summaryMetrics, acc telegraf.Ac
 	}
 }
 
-func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator, metricName string) {
+func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
+	metricName string, labelFilter filter.Filter,
+	url string, log telegraf.Logger) {
+
+	var converted string
+
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
+
+	if nodeLabels {
+		log.Debug("nodeLabels true")	
+		labels := urlToNodeLabels[url]
+		log.Debugf("%d lables for url: %s\n", len(labels), url)	
+		log.Debugf("Labels now: %+v\n", labels)	
+		for k, v := range labels {
+			log.Debugf("buildNodeMetrics(): label: %s -> %s", k, v)
+			if labelFilter.Match(k) {
+				log.Debugf("buildNodeMetrics(): filter matched: %s -> %s", k, v)
+				if convertLabels {
+					converted = invalid_sql_chars.ReplaceAllString(k, "_") 
+					tags[converted] = v
+				}else {
+					tags[k] = v
+				}
+			}
+		}
+	}
+
 	fields := make(map[string]interface{})
 	fields["cpu_usage_nanocores"] = summaryMetrics.Node.CPU.UsageNanoCores
 	fields["cpu_usage_core_nanoseconds"] = summaryMetrics.Node.CPU.UsageCoreNanoSeconds
@@ -276,6 +336,9 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 
 func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
+
+		var converted string
+
 		podLabels := make(map[string]string)
 		containerImages := make(map[string]string)
 		for _, info := range podInfo {
@@ -308,7 +371,12 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 				}
 			}
 			for k, v := range podLabels {
-				tags[k] = v
+				if convertLabels {
+					converted = invalid_sql_chars.ReplaceAllString(k, "_") 
+					tags[converted] = v
+				}else {
+					tags[k] = v
+				}
 			}
 			fields := make(map[string]interface{})
 			fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores

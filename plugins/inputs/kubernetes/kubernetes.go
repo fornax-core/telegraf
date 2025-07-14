@@ -31,7 +31,6 @@ var invalid_sql_chars, _ = regexp.Compile(`[^_a-zA-Z0-9]+`)
 var urlToNodeLabels = make(map[string]map[string]string)
 var convertLabels bool
 var nodeLabels bool
-var downwardLabels bool
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -45,7 +44,6 @@ type Kubernetes struct {
 	NodeMetricName  string          `toml:"node_metric_name"`
 	LabelInclude    []string        `toml:"label_include"`
 	LabelExclude    []string        `toml:"label_exclude"`
-	DownwardLabels  []string 		`toml:"downward_labels"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
 	ConvertLabels     bool            `toml:"convert_labels"`

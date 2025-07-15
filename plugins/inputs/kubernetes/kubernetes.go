@@ -31,6 +31,8 @@ var invalid_sql_chars, _ = regexp.Compile(`[^_a-zA-Z0-9]+`)
 var urlToNodeLabels = make(map[string]map[string]string)
 var convertLabels bool
 var nodeLabels bool
+var downwardLabels bool
+var DownwardLabels = make(map[string]bool)
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -44,10 +46,11 @@ type Kubernetes struct {
 	NodeMetricName  string          `toml:"node_metric_name"`
 	LabelInclude    []string        `toml:"label_include"`
 	LabelExclude    []string        `toml:"label_exclude"`
+	DownwardLabels  []string        `toml:"downward_labels"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
-	ConvertLabels     bool            `toml:"convert_labels"`
-	NodeLabels        bool            `toml:"node_labels"`
+	ConvertLabels     bool          `toml:"convert_labels"`
+	NodeLabels        bool          `toml:"node_labels"`
 
 	tls.ClientConfig
 
@@ -91,6 +94,17 @@ func (k *Kubernetes) Init() error {
 	if k.NodeLabels {
 		k.Log.Debugf("k.NodeLabels true")
 		nodeLabels = true
+	}
+
+	if len(k.DownwardLabels) != 0 {
+		downwardLabels = true
+		k.Log.Debug("Init DownwardLabels is now true")
+		for _, label := range(k.DownwardLabels) {
+			k.Log.Debugf("Init DownwardLabel: %s\n", label)
+			DownwardLabels[label] = true
+		}
+	}else {
+		k.Log.Debug("Init DownwardLabels is false")
 	}
 
 	k.Log.Debugf("k.Init() k = %+v", k)
@@ -142,7 +156,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 		return nil, err
 	}
 
-		urlToNodeLabels = map[string]map[string]string{}
+	urlToNodeLabels = map[string]map[string]string{}
 
 	nodeUrls := make([]string, 0, len(nodes.Items))
 	for i := range nodes.Items {
@@ -192,7 +206,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName, k.labelFilter, baseURL, k.Log)
-	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
+	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc, baseURL, k.Log)
 	return nil
 }
 
@@ -334,7 +348,15 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
+		labelFilter filter.Filter, acc telegraf.Accumulator,
+		url string,
+		log telegraf.Logger) {
+
+	node_labels := urlToNodeLabels[url]
+
+
+
 	for _, pod := range summaryMetrics.Pods {
 
 		var converted string
@@ -350,6 +372,19 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 					if labelFilter.Match(k) {
 						podLabels[k] = v
 					}
+				}
+			}
+		}
+		if downwardLabels == true {
+			log.Debugf("buildPodMetrics: downwardLabels: true")
+			for k, _ := range(DownwardLabels) {
+				log.Debugf("buildPodMetrics: lookFor: %s", k)
+				dv, ok := node_labels[k]
+				if ok {
+					log.Debugf("Downward:buildPodMetrics found/set: %s = %s\n", k, dv)
+					podLabels[k] = dv
+				}else {
+					log.Debugf("Downward:buildPodMetrics not found: %s\n", k)
 				}
 			}
 		}
@@ -371,6 +406,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 				}
 			}
 			for k, v := range podLabels {
+                log.Debugf("Downward:buildPodLabels: podLabel: %s = %s\n", k, v)
 				if convertLabels {
 					converted = invalid_sql_chars.ReplaceAllString(k, "_") 
 					tags[converted] = v

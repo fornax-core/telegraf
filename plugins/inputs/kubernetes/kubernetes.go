@@ -32,7 +32,6 @@ var urlToNodeLabels = make(map[string]map[string]string)
 var convertLabels bool
 var nodeLabels bool
 var downwardLabels bool
-var DownwardLabels = make(map[string]bool)
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -98,13 +97,6 @@ func (k *Kubernetes) Init() error {
 
 	if len(k.DownwardLabels) != 0 {
 		downwardLabels = true
-		k.Log.Debug("Init DownwardLabels is now true")
-		for _, label := range(k.DownwardLabels) {
-			k.Log.Debugf("Init DownwardLabel: %s\n", label)
-			DownwardLabels[label] = true
-		}
-	}else {
-		k.Log.Debug("Init DownwardLabels is false")
 	}
 
 	k.Log.Debugf("k.Init() k = %+v", k)
@@ -206,7 +198,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName, k.labelFilter, baseURL, k.Log)
-	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc, baseURL, k.Log)
+	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc, baseURL, k)
 	return nil
 }
 
@@ -351,17 +343,16 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 		labelFilter filter.Filter, acc telegraf.Accumulator,
 		url string,
-		log telegraf.Logger) {
+		k8s *Kubernetes) {
 
 	node_labels := urlToNodeLabels[url]
-
-
 
 	for _, pod := range summaryMetrics.Pods {
 
 		var converted string
 
 		podLabels := make(map[string]string)
+
 		containerImages := make(map[string]string)
 		for _, info := range podInfo {
 			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
@@ -375,20 +366,17 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 				}
 			}
 		}
+
 		if downwardLabels == true {
-			log.Debugf("buildPodMetrics: downwardLabels: true")
-			for k, _ := range(DownwardLabels) {
-				log.Debugf("buildPodMetrics: lookFor: %s", k)
+			k8s.Log.Debugf("buildPodMetrics: (Pod:%s) downwardLabels: true", pod.PodRef.Name)
+			for _, k := range(k8s.DownwardLabels) {
 				dv, ok := node_labels[k]
 				if ok {
-					log.Debugf("Downward:buildPodMetrics found/set: %s = %s\n", k, dv)
+					k8s.Log.Debugf("Downward:buildPodMetrics set: %s = %s\n", k, dv)
 					podLabels[k] = dv
-				}else {
-					log.Debugf("Downward:buildPodMetrics not found: %s\n", k)
 				}
 			}
 		}
-
 		for _, container := range pod.Containers {
 			tags := map[string]string{
 				"node_name":      summaryMetrics.Node.NodeName,
@@ -406,7 +394,6 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 				}
 			}
 			for k, v := range podLabels {
-                log.Debugf("Downward:buildPodLabels: podLabel: %s = %s\n", k, v)
 				if convertLabels {
 					converted = invalid_sql_chars.ReplaceAllString(k, "_") 
 					tags[converted] = v

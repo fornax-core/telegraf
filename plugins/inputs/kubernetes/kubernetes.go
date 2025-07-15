@@ -163,7 +163,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 		labels := make(map[string]string)
 		labels = n.GetLabels()
 		nodeUrls = append(nodeUrls, url)
-		urlToNodeLabels[url] = labels	
+		urlToNodeLabels[url] = labels
 	}
 
 	return nodeUrls, nil
@@ -235,16 +235,16 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 	}
 
 	if nodeLabels {
-		log.Debug("nodeLabels true")	
+		log.Debug("nodeLabels true")
 		labels := urlToNodeLabels[url]
-		log.Debugf("%d lables for url: %s\n", len(labels), url)	
-		log.Debugf("Labels now: %+v\n", labels)	
+		log.Debugf("%d lables for url: %s\n", len(labels), url)
+		log.Debugf("Labels now: %+v\n", labels)
 		for k, v := range labels {
 			log.Debugf("buildNodeMetrics(): label: %s -> %s", k, v)
 			if labelFilter.Match(k) {
 				log.Debugf("buildNodeMetrics(): filter matched: %s -> %s", k, v)
 				if convertLabels {
-					converted = invalid_sql_chars.ReplaceAllString(k, "_") 
+					converted = invalid_sql_chars.ReplaceAllString(k, "_")
 					tags[converted] = v
 				}else {
 					tags[k] = v

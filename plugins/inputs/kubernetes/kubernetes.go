@@ -29,9 +29,11 @@ import (
 var sampleConfig string
 var invalid_sql_chars, _ = regexp.Compile(`[^_a-zA-Z0-9]+`)
 var urlToNodeLabels = make(map[string]map[string]string)
+var urlToNodeSpec = make(map[string]v1.NodeSpec)
 var convertLabels bool
 var nodeLabels bool
 var downwardLabels bool
+var downwardSpec bool
 var external_ipv4 bool
 
 const (
@@ -47,6 +49,7 @@ type Kubernetes struct {
 	LabelInclude    []string        `toml:"label_include"`
 	LabelExclude    []string        `toml:"label_exclude"`
 	DownwardLabels  []string        `toml:"downward_labels"`
+	DownwardSpec    []string        `toml:"downward_spec"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
 	ConvertLabels     bool          `toml:"convert_labels"`
@@ -101,6 +104,10 @@ func (k *Kubernetes) Init() error {
 		downwardLabels = true
 	}
 
+	if len(k.DownwardSpec) != 0 {
+		downwardSpec = true
+	}
+
 	if k.NodeExternalIPv4 {
 		k.Log.Debugf("k.NodeExternalIP true")
 		external_ipv4 = true
@@ -109,6 +116,7 @@ func (k *Kubernetes) Init() error {
 	k.Log.Debugf("k.Init() k = %+v", k)
 
 	return nil
+
 }
 
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
@@ -179,6 +187,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 			}
 		}
 		urlToNodeLabels[url] = labels
+		urlToNodeSpec[url] = n.Spec
 	}
 	return nodeUrls, nil
 }
@@ -282,6 +291,15 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 				}
 			}
 		}
+	}
+
+	if downwardSpec {
+		log.Debugf("downwardSpec true")
+		spec := urlToNodeSpec[url]
+		provider_parts := strings.Split(spec.ProviderID, ",")
+		instance_id := provider_parts[len(provider_parts)-1]
+		log.Debugf("downwardSpec: providerID: %s", instance_id)
+		tags["instance_id"] = instance_id
 	}
 
 	fields := make(map[string]interface{})

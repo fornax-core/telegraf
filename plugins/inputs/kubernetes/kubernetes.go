@@ -37,6 +37,7 @@ var downwardSpec bool
 var external_ipv4 bool
 var pod_ip bool
 var pod_uid bool
+var node_spec_provider_id bool
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"

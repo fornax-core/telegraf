@@ -54,11 +54,12 @@ type Kubernetes struct {
 	DownwardSpec    []string        `toml:"downward_spec"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
-	ConvertLabels     bool          `toml:"convert_labels"`
-	NodeLabels        bool          `toml:"node_labels"`
-	NodeExternalIPv4  bool          `toml:"node_external_ipv4"`
-	PodUID            bool          `toml:"pod_uid"`
-	PodIP             bool          `toml:"pod_ip"`
+	ConvertLabels      bool         `toml:"convert_labels"`
+	NodeLabels         bool         `toml:"node_labels"`
+	NodeExternalIPv4   bool         `toml:"node_external_ipv4"`
+    NodeSpecProviderId bool         `toml:"node_spec_provider_id"`
+	PodUID             bool         `toml:"pod_uid"`
+	PodIP              bool         `toml:"pod_ip"`
 
 	tls.ClientConfig
 
@@ -108,8 +109,8 @@ func (k *Kubernetes) Init() error {
 		downwardLabels = true
 	}
 
-	if len(k.DownwardSpec) != 0 {
-		downwardSpec = true
+	if k.NodeSpecProviderId {
+		node_spec_provider_id = true
 	}
 
 	if k.PodIP {
@@ -305,12 +306,12 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 		}
 	}
 
-	if downwardSpec {
-		log.Debugf("downwardSpec true")
+	if node_spec_provider_id {
+		log.Debugf("node_spec_provider_id true")
 		spec := urlToNodeSpec[url]
 		provider_parts := strings.Split(spec.ProviderID, ",")
 		instance_id := provider_parts[len(provider_parts)-1]
-		log.Debugf("downwardSpec: providerID: %s", instance_id)
+		log.Debugf("parsed providerID, now instance_id: %s", instance_id)
 		tags["instance_id"] = instance_id
 	}
 

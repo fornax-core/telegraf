@@ -35,6 +35,8 @@ var nodeLabels bool
 var downwardLabels bool
 var downwardSpec bool
 var external_ipv4 bool
+var pod_ip bool
+var pod_uid bool
 
 const (
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -55,6 +57,8 @@ type Kubernetes struct {
 	ConvertLabels     bool          `toml:"convert_labels"`
 	NodeLabels        bool          `toml:"node_labels"`
 	NodeExternalIPv4  bool          `toml:"node_external_ipv4"`
+	PodUID            bool          `toml:"pod_uid"`
+	PodIP             bool          `toml:"pod_ip"`
 
 	tls.ClientConfig
 
@@ -106,6 +110,14 @@ func (k *Kubernetes) Init() error {
 
 	if len(k.DownwardSpec) != 0 {
 		downwardSpec = true
+	}
+
+	if k.PodIP {
+		pod_ip = true
+	}
+
+	if k.PodUID {
+		pod_uid = true
 	}
 
 	if k.NodeExternalIPv4 {
@@ -413,9 +425,34 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 						podLabels[k] = v
 					}
 				}
+                k8s.Log.Debugf("info type: %T", info)
+                k8s.Log.Debugf("info val: %v", info)
+                k8s.Log.Debugf("info.Metadata: %v", info.Metadata)
+                k8s.Log.Debugf("info.Metadata: %T", info.Metadata)
+                k8s.Log.Debugf("info.Spec: %v", info.Spec)
+                k8s.Log.Debugf("info.Spec: %T", info.Spec)
+
+                /*
+                if k8s.PodUID == true {
+                    v, ok := info.Metadata.uid
+                    if ok {
+                        k8s.Log.Debugf("get uid val: %v, type: %T", v, v)
+                        podLabels[pod_uid] = v
+                    }
+                }
+
+                if k8s.PodIP == true {
+                    v, ok := info.Spec.PodIP
+                    if ok {
+                        k8s.Log.Debug("get ip val: %v, type: %T", v, v)
+                        podLabels[pod_ip] = v
+                    }
+                }
+                */
 			}
 		}
 
+		
 		if downwardLabels == true {
 			k8s.Log.Debugf("buildPodMetrics: (Pod:%s) downwardLabels: true", pod.PodRef.Name)
 			for _, k := range(k8s.DownwardLabels) {
@@ -426,6 +463,8 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 				}
 			}
 		}
+
+
 		for _, container := range pod.Containers {
 			tags := map[string]string{
 				"node_name":      summaryMetrics.Node.NodeName,

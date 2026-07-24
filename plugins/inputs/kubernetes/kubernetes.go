@@ -70,6 +70,7 @@ func (k *Kubernetes) Init() error {
 	}
 
 	labelFilter, err := filter.NewIncludeExcludeFilter(k.LabelInclude, k.LabelExclude)
+
 	if err != nil {
 		return err
 	}
@@ -154,9 +155,11 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 			continue
 		}
 		url := "https://"+address+":10250"
+        log.Debugf("getNodeURLs() url: %s", url)
 		labels := make(map[string]string)
 		labels = n.GetLabels()
 		nodeUrls = append(nodeUrls, url)
+        log.Debugf("Map node's labels via urlToNodeLables[%s] = <labels>", url)
 		urlToNodeLabels[url] = labels	
 	}
 
@@ -165,18 +168,18 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 
 // Prefer internal addresses, if none found, use ExternalIP
 func getNodeAddress(addresses []v1.NodeAddress) string {
-	extAddresses := make([]string, 0)
-	for _, addr := range addresses {
-		if addr.Type == v1.NodeInternalIP {
-			return addr.Address
-		}
-		extAddresses = append(extAddresses, addr.Address)
-	}
+    extAddresses := make([]string, 0)
+    for _, addr := range addresses {
+        if addr.Type == v1.NodeInternalIP {
+            return addr.Address
+        }
+        extAddresses = append(extAddresses, addr.Address)
+    }
 
-	if len(extAddresses) > 0 {
-		return extAddresses[0]
-	}
-	return ""
+    if len(extAddresses) > 0 {
+        return extAddresses[0]
+    }
+    return ""
 }
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
@@ -270,6 +273,7 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 }
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]item, error) {
+    log.Debugf("gatherPodInfo(baseURL): baseURL: %s/pods", baseURL)
 	var podAPI pods
 	err := k.loadJSON(baseURL+"/pods", &podAPI)
 	if err != nil {
@@ -277,6 +281,7 @@ func (k *Kubernetes) gatherPodInfo(baseURL string) ([]item, error) {
 	}
 	podInfos := make([]item, 0, len(podAPI.Items))
 	podInfos = append(podInfos, podAPI.Items...)
+    log.Debug("No errors on getherPodInfo() returning %d pods", len(podINfos))
 	return podInfos, nil
 }
 

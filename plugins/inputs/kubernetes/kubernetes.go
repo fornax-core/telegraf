@@ -340,12 +340,14 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]item, error) {
 	var podAPI pods
+    k.Log.Debugf("gatherPodInfo(baseURL): %s", baseURL)
 	err := k.loadJSON(baseURL+"/pods", &podAPI)
 	if err != nil {
 		return nil, err
 	}
 	podInfos := make([]item, 0, len(podAPI.Items))
 	podInfos = append(podInfos, podAPI.Items...)
+    k.Log.Debugf("gatherPodInfo() returning: %d pods", len(podInfos))
 	return podInfos, nil
 }
 
@@ -415,8 +417,8 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 		var converted string
 
 		podLabels := make(map[string]string)
-
 		containerImages := make(map[string]string)
+
 		for _, info := range podInfo {
 			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
 				for _, v := range info.Spec.Containers {
@@ -427,16 +429,17 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 						podLabels[k] = v
 					}
 				}
-                k8s.Log.Debugf("info type: %T", info)
-                k8s.Log.Debugf("info val: %v", info)
-                k8s.Log.Debugf("info.Metadata: %v", info.Metadata)
-                k8s.Log.Debugf("info.Metadata: %T", info.Metadata)
-                k8s.Log.Debugf("info.Spec: %v", info.Spec)
-                k8s.Log.Debugf("info.Spec: %T", info.Spec)
-
+                k8s.Log.Debugf("info T: %T", info)
+                k8s.Log.Debugf("info : %v", info)
+                k8s.Log.Debugf("info.Metadata v: %v", info.Metadata)
+                k8s.Log.Debugf("info.Metadata T: %T", info.Metadata)
+                k8s.Log.Debugf("info.Metadata s: %s", info.Metadata)
+                k8s.Log.Debugf("info.Spec v: %v", info.Spec)
+                k8s.Log.Debugf("info.Spec T: %T", info.Spec)
+                k8s.Log.Debugf("info.Spec s: %s", info.Spec)
                 /*
                 if k8s.PodUID == true {
-                    v, ok := info.Metadata.uid
+                    v, ok := pod.Metadata.UID
                     if ok {
                         k8s.Log.Debugf("get uid val: %v, type: %T", v, v)
                         podLabels[pod_uid] = v
@@ -444,14 +447,15 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
                 }
 
                 if k8s.PodIP == true {
-                    v, ok := info.Spec.PodIP
+                    v, ok := pod.Spec.PodIP
                     if ok {
                         k8s.Log.Debug("get ip val: %v, type: %T", v, v)
                         podLabels[pod_ip] = v
                     }
                 }
-                */
-			}
+
+            */
+            }
 		}
 
 		

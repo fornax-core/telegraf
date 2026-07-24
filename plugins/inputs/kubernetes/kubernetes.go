@@ -397,6 +397,7 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
+    log.Debugf("resp.Body: %s", resp.Body)
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)

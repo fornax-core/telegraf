@@ -432,27 +432,22 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 					}
 				}
 
-                k8s.Log.Debugf("podip: %s", info.status.PodIP)
-                k8s.Log.Debugf("podUID: %s", info.metadata.UID)
+                k8s.Log.Debugf("podip: %s", info.Status.PodIP)
+                k8s.Log.Debugf("podUID: %s", info.Metadata.UID)
 
-                /*
-                if k8s.PodUID == true {
-                    v, ok := pod.Metadata.UID
-                    if ok {
-                        k8s.Log.Debugf("get uid val: %v, type: %T", v, v)
-                        podLabels[pod_uid] = v
-                    }
-                }
+                if k8s.PodUID {
+					if info.Metadata.UID != "" {
+						k8s.Log.Debugf("get uid val: %s", info.Metadata.UID)
+						podLabels["pod_uid"] = string(info.Metadata.UID)
+					}
+				}
 
-                if k8s.PodIP == true {
-                    v, ok := pod.Spec.PodIP
-                    if ok {
-                        k8s.Log.Debug("get ip val: %v, type: %T", v, v)
-                        podLabels[pod_ip] = v
-                    }
-                }
-
-            */
+				if k8s.PodIP {
+					if info.Status.PodIP != "" {
+						k8s.Log.Debugf("get ip val: %s", info.Status.PodIP)
+						podLabels["pod_ip"] = info.Status.PodIP
+					}
+				}
             }
 		}
 

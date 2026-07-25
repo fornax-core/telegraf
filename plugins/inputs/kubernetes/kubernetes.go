@@ -397,7 +397,7 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-    log.Debugf("**** resp.Body ****: %s", resp.Body)
+    k.Log.Debugf("**** resp.Body ****: %s", resp.Body)
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)
@@ -438,7 +438,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
                 if k8s.PodUID {
 					if info.Metadata.UID != "" {
 						k8s.Log.Debugf("get uid val: %s", info.Metadata.UID)
-						podLabels["pod_uid"] = string(info.Metadata.UID)
+						podLabels["pod_uid"] = info.Metadata.UID
 					}
 				}
 

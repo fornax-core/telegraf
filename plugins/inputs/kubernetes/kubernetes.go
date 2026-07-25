@@ -432,8 +432,9 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 					}
 				}
 
-                k8s.Log.Debugf("podip: %s", pod.status.PodIP)
-                k8s.Log.Debugf("podUID: %s", pod.spec.UID)
+                k8s.Log.Debugf("podip: %s", info.status.PodIP)
+                k8s.Log.Debugf("podUID: %s", info.metadata.UID)
+
                 /*
                 if k8s.PodUID == true {
                     v, ok := pod.Metadata.UID

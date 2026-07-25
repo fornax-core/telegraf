@@ -397,7 +397,7 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-    log.Debugf("resp.Body: %s", resp.Body)
+    log.Debugf("**** resp.Body ****: %s", resp.Body)
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)
@@ -420,6 +420,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 		podLabels := make(map[string]string)
 		containerImages := make(map[string]string)
 
+
 		for _, info := range podInfo {
 			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
 				for _, v := range info.Spec.Containers {
@@ -430,14 +431,9 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 						podLabels[k] = v
 					}
 				}
-                k8s.Log.Debugf("info T: %T", info)
-                k8s.Log.Debugf("info : %v", info)
-                k8s.Log.Debugf("info.Metadata v: %v", info.Metadata)
-                k8s.Log.Debugf("info.Metadata T: %T", info.Metadata)
-                k8s.Log.Debugf("info.Metadata s: %s", info.Metadata)
-                k8s.Log.Debugf("info.Spec v: %v", info.Spec)
-                k8s.Log.Debugf("info.Spec T: %T", info.Spec)
-                k8s.Log.Debugf("info.Spec s: %s", info.Spec)
+
+                k8s.Log.Debugf("podip: %s", pod.status.PodIP)
+                k8s.Log.Debugf("podUID: %s", pod.spec.UID)
                 /*
                 if k8s.PodUID == true {
                     v, ok := pod.Metadata.UID

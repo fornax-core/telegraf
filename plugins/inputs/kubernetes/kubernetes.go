@@ -395,7 +395,18 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
+    var result map[string]interface{}
+    err = json.Unmarshal([]byte(resp.Body), &result)
+	if err != nil {
+		return fmt.Errorf("error generic parsing response: %w", err)
+	}
+
+    k.Log.Debugf("--- Using %#v ---")
+	k.Log.Debugf("%#v\n", result)
+	k.Log.Debugf("--- Using %+v ---")
+	k.Log.Debugf("%+v\n\n", result)
     k.Log.Debugf("**** resp.Body ****: %s", resp.Body)
+
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)

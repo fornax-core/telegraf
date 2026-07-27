@@ -2,8 +2,6 @@
 package kubernetes
 
 import (
-    "io"
-    "bytes"
 	"context"
 	_ "embed"
 	"encoding/json"

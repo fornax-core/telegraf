@@ -397,6 +397,7 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
+    /*
     bodyBytes, err := io.ReadAll(resp.Body)
     if err != nil {
         return fmt.Errorf("error reading response body: %w", err)
@@ -412,13 +413,12 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
     if err := json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(v); err != nil {
         return fmt.Errorf("error parsing response into v: %w", err)
     }
+    */
 
-    /*
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)
 	}
-    */
 
 	return nil
 }

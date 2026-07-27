@@ -401,16 +401,36 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		return fmt.Errorf("error generic parsing response: %w", err)
 	}
 
+    /*
     k.Log.Debugf("--- Using %#v ---")
 	k.Log.Debugf("%#v\n", result)
 	k.Log.Debugf("--- Using %+v ---")
 	k.Log.Debugf("%+v\n\n", result)
     k.Log.Debugf("**** resp.Body ****: %s", resp.Body)
+    */
 
+    bodyBytes, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return fmt.Errorf("error reading response body: %w", err)
+    }
+
+    var result map[string]interface{}
+    if err := json.Unmarshal(bodyBytes, &result); err != nil {
+        return fmt.Errorf("error parsing response into map: %w", err)
+    }
+
+    fmt.Printf("Raw result: %#v\n", result)
+
+    if err := json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(v); err != nil {
+        return fmt.Errorf("error parsing response into v: %w", err)
+    }
+
+    /*
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return fmt.Errorf("error parsing response: %w", err)
 	}
+    */
 
 	return nil
 }

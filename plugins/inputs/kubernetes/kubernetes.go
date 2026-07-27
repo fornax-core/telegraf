@@ -33,7 +33,6 @@ var urlToNodeSpec = make(map[string]v1.NodeSpec)
 var convertLabels bool
 var nodeLabels bool
 var downwardLabels bool
-var downwardSpec bool
 var external_ipv4 bool
 var pod_ip bool
 var pod_uid bool
@@ -52,7 +51,6 @@ type Kubernetes struct {
 	LabelInclude    []string        `toml:"label_include"`
 	LabelExclude    []string        `toml:"label_exclude"`
 	DownwardLabels  []string        `toml:"downward_labels"`
-	DownwardSpec    []string        `toml:"downward_spec"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Log             telegraf.Logger `toml:"-"`
 	ConvertLabels      bool         `toml:"convert_labels"`
@@ -310,7 +308,7 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 	if node_spec_provider_id {
 		log.Debugf("node_spec_provider_id true")
 		spec := urlToNodeSpec[url]
-		provider_parts := strings.Split(spec.ProviderID, ",")
+		provider_parts := strings.Split(spec.ProviderID, "/")
 		instance_id := provider_parts[len(provider_parts)-1]
 		log.Debugf("parsed providerID, now instance_id: %s", instance_id)
 		tags["instance_id"] = instance_id

@@ -15,7 +15,7 @@ type item struct {
 type metadata struct {
 	Name      string            `json:"name"`
 	Namespace string            `json:"namespace"`
-    UID       string            `json:"uid"`       // Add UID here if missing
+	UID       string            `json:"uid"`       // Add UID here if missing
 	Labels    map[string]string `json:"labels"`
 }
 
@@ -30,5 +30,5 @@ type container struct {
 
 
 type status struct {
-    PodIP string `json:"podIP"`
+	PodIP string `json:"podIP"`
 }

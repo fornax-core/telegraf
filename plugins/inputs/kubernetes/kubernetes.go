@@ -2,6 +2,8 @@
 package kubernetes
 
 import (
+    "io"
+    "bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -393,12 +395,6 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
-	}
-
-    var result map[string]interface{}
-    err = json.Unmarshal([]byte(resp.Body), &result)
-	if err != nil {
-		return fmt.Errorf("error generic parsing response: %w", err)
 	}
 
     /*

@@ -6,7 +6,7 @@ WORKDIR /src
 COPY . .
 ARG COMMIT=unknown
 ARG BRANCH=unknown
-# Fornax build: only the plugins used by the telegraf-ds DaemonSet.
+
 ARG BUILDTAGS=custom,inputs.cpu,inputs.disk,inputs.diskio,inputs.kubernetes,inputs.mem,inputs.net,inputs.processes,inputs.swap,inputs.system,outputs.postgresql
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build BUILDTAGS="${BUILDTAGS}" commit=${COMMIT} branch=${BRANCH}
 

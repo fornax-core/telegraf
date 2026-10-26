@@ -7,7 +7,7 @@ COPY . .
 ARG COMMIT=unknown
 ARG BRANCH=unknown
 
-ARG BUILDTAGS=custom,inputs.cpu,inputs.disk,inputs.diskio,inputs.kubernetes,inputs.mem,inputs.net,inputs.processes,inputs.swap,inputs.system,outputs.postgresql
+ARG BUILDTAGS=custom,inputs.cpu,inputs.disk,inputs.diskio,inputs.kubernetes,inputs.mem,inputs.net,inputs.processes,inputs.socket_listener,inputs.swap,inputs.system,outputs.postgresql,parsers.influx
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build BUILDTAGS="${BUILDTAGS}" commit=${COMMIT} branch=${BRANCH}
 
 FROM ${TELEGRAF_BASE_IMAGE}

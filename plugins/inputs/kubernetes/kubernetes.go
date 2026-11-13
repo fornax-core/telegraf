@@ -283,7 +283,7 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator,
 	var converted string
 
 	tags := map[string]string{
-		"node_name": summaryMetrics.Node.NodeName,
+        "node_name": summaryMetrics.Node.NodeName,
 	}
 
 	if nodeLabels {
@@ -427,6 +427,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 		k8s *Kubernetes) {
 
 	node_labels := urlToNodeLabels[url]
+	spec := urlToNodeSpec[url]
 
 	for _, pod := range summaryMetrics.Pods {
 
@@ -477,6 +478,14 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item,
 				}
 			}
 		}
+
+        if node_spec_provider_id {
+            k8s.Log.Debugf("buildPod: node_spec_provider_id true")
+            provider_parts := strings.Split(spec.ProviderID, "/")
+            instance_id := provider_parts[len(provider_parts)-1]
+            k8s.Log.Debugf("buildPod: parsed providerID, now instance_id: %s", instance_id)
+            podLabels["instance_id"] = instance_id
+        }
 
 
 		for _, container := range pod.Containers {
